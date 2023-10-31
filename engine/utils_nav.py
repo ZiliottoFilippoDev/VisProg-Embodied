@@ -26,7 +26,7 @@ class ProgramInterpreter:
     def execute(self,prog,init_state,inspect=False):
         if isinstance(prog,str):
             prog = Program(prog,init_state)
-            prog.state = dict(init_state)
+            prog.state = dict(init_state) if init_state is not None else dict()
         else:
             assert(isinstance(prog,Program))
 
@@ -34,17 +34,29 @@ class ProgramInterpreter:
             for instruction in prog.instructions]
 
         html_str = '<hr>'
-        for prog_step in prog_steps:
-            print(prog.state)
+
+        end_episode, trials = False, 1
+        while not end_episode and trials < 4:
+            print('-------------')
+            print(f'| Trial n°{trials} |')
+            print('-------------')
+            for prog_step in prog_steps:
+                # print(prog.state)
+                if inspect:
+                    step_output, step_html = self.execute_step(prog_step,inspect)
+                    html_str += step_html + '<hr>'
+                else:
+                    step_output = self.execute_step(prog_step,inspect)
+
+                # check if stop is called, else loop (navigate)
+                if isinstance(step_output, str):
+                    if step_output in ['STOP','NAVIGATE']:
+                        end_episode = step_output == 'STOP'
+
             if inspect:
-                step_output, step_html = self.execute_step(prog_step,inspect)
-                html_str += step_html + '<hr>'
-            else:
-                step_output = self.execute_step(prog_step,inspect)
-
-        if inspect:
-            return step_output, prog.state, html_str
-
+                return step_output, prog.state, html_str
+            trials+=1
+        
         return step_output, prog.state
 
 

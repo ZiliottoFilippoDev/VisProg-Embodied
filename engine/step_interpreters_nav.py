@@ -186,7 +186,7 @@ class NavigateInterpreter():
 
         # fake code navigation 
         # return distance from target at stop action of agent
-        fake_dist = 0.2
+        fake_dist = .2
         prog_step.state[output_var] = fake_dist
 
         return fake_dist

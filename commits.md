@@ -1,7 +1,9 @@
-First push: 
+### First push: 
     - Implementation fo basic pointnav classes in the code
     - Addition of in-context examples for pointnav
-    - The code runs
+    - The code runs for one iteration
 
-Next Push ideally:
-    - Run the code using also the "while" loop in the in-context examples
+### Second Push:
+    - Implement loops if navigation fails (done)
+    - Modify input string to allow for multiple while loops, e.g. NAV0 + NAV1
+    - Adding part for objectnav --> DETECT class, while loop
