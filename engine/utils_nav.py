@@ -4,7 +4,7 @@ import openai
 import numpy as np
 import copy
 
-from .step_interpreters import register_step_interpreters, parse_step
+from .step_interpreters_nav import register_step_interpreters, parse_step
 
 
 class Program:
@@ -26,6 +26,7 @@ class ProgramInterpreter:
     def execute(self,prog,init_state,inspect=False):
         if isinstance(prog,str):
             prog = Program(prog,init_state)
+            prog.state = dict(init_state)
         else:
             assert(isinstance(prog,Program))
 
@@ -34,8 +35,7 @@ class ProgramInterpreter:
 
         html_str = '<hr>'
         for prog_step in prog_steps:
-            print(prog_steps.instructions)
-            print(prog_steps.state)
+            print(prog.state)
             if inspect:
                 step_output, step_html = self.execute_step(prog_step,inspect)
                 html_str += step_html + '<hr>'

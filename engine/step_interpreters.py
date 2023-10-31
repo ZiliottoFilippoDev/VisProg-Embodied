@@ -100,7 +100,9 @@ class EvalInterpreter():
             step_input = step_input.replace('xor','!=')
 
         step_input = step_input.format(**prog_state)
+        print(step_input)
         step_output = eval(step_input)
+        print(step_output)
         prog_step.state[output_var] = step_output
         if inspect:
             html_str = self.html(eval_expression, step_input, step_output, output_var)
@@ -1064,7 +1066,8 @@ List:"""
 
     def execute(self,prog_step,inspect=False):
         text,list_max,output_var = self.parse(prog_step)
-        item_list = self.get_list(text,list_max)
+        #item_list = self.get_list(text,list_max)
+        item_list = ['Amitabh Bachchan','Shah Rukh Khan','Aamir Khan','Salman Khan']
         prog_step.state[output_var] = item_list
         if inspect:
             html_str = self.html(text, list_max, item_list, output_var)
@@ -1332,8 +1335,57 @@ class ReplaceInterpreter():
             return new_img, html_str
         return new_img
 
+class ProvaInterpreter():
+    # trial module that only writes "Hello World" on the image + bbox
+    step_name= 'PROVA'
+
+    def __init__(self):
+        print(f'Registering {self.step_name} step')
+
+    def parse(self,prog_step):    
+        parse_result = parse_step(prog_step.prog_str)
+        step_name = parse_result['step_name']
+        img_var = parse_result['args']['image']
+        output_var = parse_result['output_var']
+        assert(step_name==self.step_name)
+        return img_var,output_var
+
+    def html(self,img_var,prova_img,output_var):
+        step_name = html_step_name(self.step_name)
+        img_var = html_var_name(img_var)
+        prova_img = html_embed_image(prova_img,300)
+        img_arg = html_arg_name('image')
+        output_var = html_var_name(output_var)
+        return f"""<div>{output_var}={step_name}({img_arg}={img_var})={prova_img}</div>"""
+    
+    def hello_world(self,img):
+        W,H = img.size
+        img1 = img.copy()
+        draw = ImageDraw.Draw(img1)
+
+        label = 'Hello World!' #fake label
+        fake_box = (W/4, H/4, 3*W/4, 3*H/4) #fake bbox
+        font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf', 36)
+        draw.rectangle(fake_box, fill='green')
+        draw.text((W/4+30,H/2-30),label,fill='white',font=font)
+        return img1
+
+    def execute(self,prog_step,inspect=False):    
+        img_var, output_var = self.parse(prog_step)
+        orig_img = prog_step.state[img_var]
+        img = self.hello_world(orig_img)
+        prog_step.state[output_var] = img
+        if inspect:
+            html_str = self.html(img_var, img, output_var)
+            return img, html_str
+        return img
+
 
 def register_step_interpreters(dataset='nlvr'):
+    if dataset == 'prova':
+        return dict(
+            PROVA=ProvaInterpreter(),
+        )
     if dataset=='nlvr':
         return dict(
             VQA=VQAInterpreter(),
