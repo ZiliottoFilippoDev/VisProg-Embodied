@@ -247,14 +247,14 @@ class LocateInterpreter():
         step_input, output_var = self.parse(prog_step)
 
         dist = prog_step.state[step_input] <= th_
-        dist_var = str(prog_step.state[step_input])[:4]
+        dist_var = round(prog_step.state[step_input],2)
         prog_step.state[output_var] = dist
         return dist, output_var, dist_var
     
     def html(self,output_var,pos_var, dist_var):
         step_name=html_step_name(self.step_name)
         pos_arg=html_arg_name('pos')
-        dist_arg=html_arg_name('dist_to_goal')
+        dist_arg=html_output('dist_to_goal')
         output_var=html_var_name(output_var)
         return f"<div>{output_var}={step_name}({pos_arg}='{pos_var}',{dist_arg}='{dist_var}m')</div>"
 
@@ -296,16 +296,18 @@ class EvalInterpreter():
         prog_step.state[output_var] = step_output
         return step_output
     
-    def html(self,output_var,eval_var):
+    def html(self,output_var,step_output,eval_var):
         step_name=html_step_name(self.step_name)
         expr_arg=html_arg_name('expr')
         output_var=html_var_name(output_var)
+        eval_var=html_output(eval_var)
         return f"<div>{output_var}={step_name}({expr_arg}='{eval_var}')</div>"
 
     def execute(self, prog_step,inspect=False):
         if inspect:
-            eval_var, output_var = self.parse(prog_step)
-            html_str = self.html(output_var,eval_var)
+            step_output, output_var = self.parse(prog_step)
+            eval_var = self.eval_(prog_step)
+            html_str = self.html(output_var,step_output, eval_var)
             return self.eval_(prog_step), html_str    
         return self.eval_(prog_step)
 
@@ -337,7 +339,8 @@ class StopInterpreter():
         step_name=html_step_name(self.step_name)
         output_var=html_var_name(output_var)
         var_arg=html_arg_name('var')
-        return f"<div>{output_var}={step_name}({var_arg}='{stop}')</div>"
+        stop_var=html_output(stop)
+        return f"<div>{output_var}={step_name}({var_arg}='{stop_var}')</div>"
 
     def execute(self,prog_step,inspect=True):   
         if inspect:
