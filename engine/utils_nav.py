@@ -3,15 +3,26 @@ from PIL import Image
 import openai
 import numpy as np
 import copy
+import re
 
 from .step_interpreters_nav import register_step_interpreters, parse_step
-
 
 class Program:
     def __init__(self,prog_str,init_state=None):
         self.prog_str = prog_str
         self.state = init_state if init_state is not None else dict()
-        self.instructions = self.prog_str.split('\n')
+        # self.instructions = self.prog_str.split('\n')
+        self.instructions_dict = self.clear_splits(prog_str)
+
+    def clear_splits(self, prog_str):
+        instructions = re.findall(r'while not \w+:\n\s*(.*?)(?=\nwhile not|\Z)', prog_str, re.DOTALL)
+
+        instructions_dict = {}
+        for split_counter, instr in enumerate(instructions, start=1):
+            cleaned_instruction = instr.rstrip('\n').replace('\\', '')
+            cleaned_lines = [line.strip() for line in cleaned_instruction.split('\n')]
+            instructions_dict[f'split{split_counter}'] = cleaned_lines
+        return instructions_dict
 
 
 class ProgramInterpreter:
@@ -22,26 +33,16 @@ class ProgramInterpreter:
         step_name = parse_step(prog_step.prog_str,partial=True)['step_name']
         print(step_name)
         return self.step_interpreters[step_name].execute(prog_step,inspect)
-
-    def execute(self,prog,init_state,inspect=False):
-        if isinstance(prog,str):
-            prog = Program(prog,init_state)
-            prog.state = dict(init_state) if init_state is not None else dict()
-        else:
-            assert(isinstance(prog,Program))
-
-        prog_steps = [Program(instruction,init_state=prog.state) \
-            for instruction in prog.instructions]
-
-        html_str = '<hr>'
-
+    
+    def execute_loop(self,prog, prog_steps,inspect):
         end_episode, trials = False, 1
-        while not end_episode and trials < 4:
+        while not end_episode and trials < 5:
             print('-------------')
             print(f'| Trial n°{trials} |')
             print('-------------')
+
+            html_str = '<hr>'
             for prog_step in prog_steps:
-                # print(prog.state)
                 if inspect:
                     step_output, step_html = self.execute_step(prog_step,inspect)
                     html_str += step_html + '<hr>'
@@ -55,8 +56,26 @@ class ProgramInterpreter:
 
             if inspect:
                 return step_output, prog.state, html_str
-            trials+=1
-        
+            
+            # take into account max 3 trials for each NAV episode
+            trials +=1 if not end_episode else 1
+
+        return step_output, prog.state
+
+    def execute(self,prog,init_state,inspect=False):
+        if isinstance(prog,str):
+            prog = Program(prog,init_state)
+            prog.state = dict(init_state) if init_state is not None else dict()
+        else:
+            assert(isinstance(prog,Program))
+
+        for splits in prog.instructions_dict.keys():
+            prog_steps = [Program(instruction,init_state=prog.state) \
+                        for instruction in prog.instructions_dict[splits]]
+
+            step_output, prog.state = self.execute_loop(prog, prog_steps, inspect)
+            print(prog.state)
+
         return step_output, prog.state
 
 

@@ -186,7 +186,8 @@ class NavigateInterpreter():
 
         # fake code navigation 
         # return distance from target at stop action of agent
-        fake_dist = .2
+        fake_dist = np.random.uniform(0., 1.)
+        print(fake_dist)
         prog_step.state[output_var] = fake_dist
 
         return fake_dist
@@ -288,7 +289,7 @@ def register_step_interpreters(dataset='pointnav'):
     if dataset == 'pointnav':
         return dict(
             NAVIGATE=NavigateInterpreter(), # navigate
-            DETECT=DetectInterpreter(), # detect an object
+            # DETECT=DetectInterpreter(), # detect an object
             STOP=StopInterpreter(), # stop navigation
             LOCATE=LocateInterpreter(), # locate agent in env
             EVAL=EvalInterpreter(), # eval if position is within range
