@@ -36,6 +36,25 @@ def parse_step(step_str,partial=False):
     parsed_result['args'] = args
     return parsed_result
 
+def html_step_name(content):
+    step_name = html_colored_span(content, 'red')
+    return f'<b>{step_name}</b>'
+
+
+def html_output(content):
+    output = html_colored_span(content, 'green')
+    return f'<b>{output}</b>'
+
+
+def html_var_name(content):
+    var_name = html_colored_span(content, 'blue')
+    return f'<b>{var_name}</b>'
+
+
+def html_arg_name(content):
+    arg_name = html_colored_span(content, 'darkorange')
+    return f'<b>{arg_name}</b>'
+
 class DetectInterpreter():
     step_name = 'DETECT'
 
@@ -177,23 +196,34 @@ class NavigateInterpreter():
         step_name = parse_result['step_name']
         img_var = parse_result['args']['image']
         output_var = parse_result['output_var']
-        step_input = parse_result['args']['goal']
+        goal_var = parse_result['args']['goal']
         assert(step_name==self.step_name)
-        return step_input, img_var, output_var
+        return img_var, goal_var, output_var
     
     def navigate(self, prog_step):
-        step_input, img_var, output_var = self.parse(prog_step)
+        img_var, goal_var, output_var = self.parse(prog_step)
 
         # fake code navigation 
         # return distance from target at stop action of agent
         fake_dist = np.random.uniform(0., 1.)
-        print(fake_dist)
         prog_step.state[output_var] = fake_dist
 
-        return fake_dist
+        return goal_var, img_var, fake_dist
+    
+    def html(self,img,output_var,goal_name):
+        step_name=html_step_name(self.step_name)
+        obj_arg=html_arg_name('goal')
+        img_arg=html_arg_name('image')
+        output_var=html_var_name(output_var)
+        img=html_embed_image(img)
+        return f"<div>{output_var}={step_name}({img_arg}={img}, {obj_arg}='{goal_name}')</div>"
 
-    def execute(self,prog_step,inspect=False):    
-        
+    def execute(self,prog_step,inspect=False):   
+        if inspect:
+            img_var, goal_name,  output_var = self.parse(prog_step)      
+            img = prog_step.state[img_var]
+            html_str = self.html(img,output_var,goal_name)
+            return self.navigate(prog_step), html_str
         return self.navigate(prog_step)
 
 class LocateInterpreter():
@@ -206,10 +236,10 @@ class LocateInterpreter():
     def parse(self,prog_step):    
         parse_result = parse_step(prog_step.prog_str)
         step_name = parse_result['step_name']
-        step_input = parse_result['args']['pos']
+        pos_var = parse_result['args']['pos']
         output_var = parse_result['output_var']
         assert(step_name==self.step_name)
-        return step_input, output_var
+        return pos_var, output_var
     
     def locate(self, prog_step, th_ = 0.5):
         # fake code for locating the target
@@ -217,10 +247,22 @@ class LocateInterpreter():
         step_input, output_var = self.parse(prog_step)
 
         dist = prog_step.state[step_input] <= th_
-        prog_step.state[output_var] = dist 
-        return dist
+        dist_var = str(prog_step.state[step_input])[:4]
+        prog_step.state[output_var] = dist
+        return dist, output_var, dist_var
+    
+    def html(self,output_var,pos_var, dist_var):
+        step_name=html_step_name(self.step_name)
+        pos_arg=html_arg_name('pos')
+        dist_arg=html_arg_name('dist_to_goal')
+        output_var=html_var_name(output_var)
+        return f"<div>{output_var}={step_name}({pos_arg}='{pos_var}',{dist_arg}='{dist_var}m')</div>"
 
-    def execute(self,prog_step,inspect=False):    
+    def execute(self,prog_step,inspect=False):   
+        if inspect:
+            pos_var, output_var, dist_var = self.locate(prog_step)  
+            html_str = self.html(output_var,pos_var, dist_var)
+            return self.locate(prog_step), html_str     
         return self.locate(prog_step)
     
 class EvalInterpreter():
@@ -253,8 +295,18 @@ class EvalInterpreter():
 
         prog_step.state[output_var] = step_output
         return step_output
+    
+    def html(self,output_var,eval_var):
+        step_name=html_step_name(self.step_name)
+        expr_arg=html_arg_name('expr')
+        output_var=html_var_name(output_var)
+        return f"<div>{output_var}={step_name}({expr_arg}='{eval_var}')</div>"
 
     def execute(self, prog_step,inspect=False):
+        if inspect:
+            eval_var, output_var = self.parse(prog_step)
+            html_str = self.html(output_var,eval_var)
+            return self.eval_(prog_step), html_str    
         return self.eval_(prog_step)
 
 class StopInterpreter():
@@ -281,7 +333,19 @@ class StopInterpreter():
 
         return stop
 
-    def execute(self,prog_step,inspect=True):    
+    def html(self,output_var,stop):
+        step_name=html_step_name(self.step_name)
+        output_var=html_var_name(output_var)
+        var_arg=html_arg_name('var')
+        return f"<div>{output_var}={step_name}({var_arg}='{stop}')</div>"
+
+    def execute(self,prog_step,inspect=True):   
+        if inspect:
+            step_input, output_var = self.parse(prog_step)
+            stop = self.stop(prog_step)
+            html_str = self.html(output_var,stop)
+            return self.stop(prog_step), html_str    
+         
         return self.stop(prog_step)
     
     

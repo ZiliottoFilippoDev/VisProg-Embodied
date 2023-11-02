@@ -35,17 +35,18 @@ class ProgramInterpreter:
         return self.step_interpreters[step_name].execute(prog_step,inspect)
     
     def execute_loop(self,prog, prog_steps,inspect):
+
         end_episode, trials = False, 1
+        html_tmp = '<hr>'
         while not end_episode and trials < 5:
             print('-------------')
             print(f'| Trial n°{trials} |')
             print('-------------')
-
-            html_str = '<hr>'
+            
             for prog_step in prog_steps:
                 if inspect:
                     step_output, step_html = self.execute_step(prog_step,inspect)
-                    html_str += step_html + '<hr>'
+                    html_tmp += step_html + '<hr>'
                 else:
                     step_output = self.execute_step(prog_step,inspect)
 
@@ -53,14 +54,11 @@ class ProgramInterpreter:
                 if isinstance(step_output, str):
                     if step_output in ['STOP','NAVIGATE']:
                         end_episode = step_output == 'STOP'
-
-            if inspect:
-                return step_output, prog.state, html_str
             
             # take into account max 3 trials for each NAV episode
-            trials +=1 if not end_episode else 1
+            trials += 1 if not end_episode else 1
 
-        return step_output, prog.state
+        return step_output, prog.state, html_tmp
 
     def execute(self,prog,init_state,inspect=False):
         if isinstance(prog,str):
@@ -69,15 +67,16 @@ class ProgramInterpreter:
         else:
             assert(isinstance(prog,Program))
 
+        html_str = '<hr>'
         for splits in prog.instructions_dict.keys():
             prog_steps = [Program(instruction,init_state=prog.state) \
                         for instruction in prog.instructions_dict[splits]]
 
-            step_output, prog.state = self.execute_loop(prog, prog_steps, inspect)
-            print(prog.state)
+            step_output, prog.state, html_split = self.execute_loop(prog, prog_steps, inspect)
+            html_str+=html_split
 
-        return step_output, prog.state
-
+        return step_output, prog.state, html_str
+    
 
 class ProgramGenerator():
     def __init__(self,prompter,temperature=0.7,top_p=0.5,prob_agg='mean', debug=False):
